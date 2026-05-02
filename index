@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>学びのセカンドオピニオン｜聴取スタンプカード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+/* ── リセット & ベース ───────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0D0D0F;
+  --surface:  #17171B;
+  --panel:    #1E1E24;
+  --border:   rgba(255,255,255,.08);
+  --border2:  rgba(255,255,255,.14);
+
+  --gold:     #F5C842;
+  --gold-dim: rgba(245,200,66,.18);
+  --gold-glow:rgba(245,200,66,.35);
+
+  --voicy:    #FF6633;
+  --voicy-dim:rgba(255,102,51,.15);
+  --voicy-glow:rgba(255,102,51,.4);
+
+  --teal:     #2DD4BF;
+  --teal-dim: rgba(45,212,191,.15);
+
+  --text:     #F0EFE8;
+  --muted:    #8A8A90;
+  --subtle:   #4A4A52;
+
+  --radius:   14px;
+  --radius-sm:8px;
+  --ff-jp:    'Zen Kaku Gothic New', sans-serif;
+  --ff-en:    'DM Serif Display', serif;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-jp);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* ── 背景ノイズ ─────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 10% 20%, rgba(255,102,51,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 90% 80%, rgba(245,200,66,.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ── ラッパー ─────────────────────────────────── */
+#app {
+  position: relative; z-index: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+}
+
+/* ── ヘッダー ─────────────────────────────────── */
+.header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(13,13,15,.85);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 50;
+}
+.header-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+}
+.brand-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--voicy);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-en); font-size: 17px; color: #fff; font-style: italic;
+  box-shadow: 0 0 14px var(--voicy-glow);
+}
+.brand-name {
+  font-size: 13px; font-weight: 700; letter-spacing: .02em;
+  line-height: 1.3;
+}
+.brand-sub { font-size: 10px; color: var(--muted); font-weight: 400; }
+
+.streak-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--gold-dim);
+  border: 1px solid rgba(245,200,66,.3);
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 11px; font-weight: 700; color: var(--gold);
+}
+.streak-fire { font-size: 14px; }
+
+/* プログレスバー */
+.prog-area { }
+.prog-meta {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--muted); margin-bottom: 7px;
+}
+.prog-meta strong { color: var(--text); font-weight: 700; }
+.prog-track {
+  height: 6px; background: var(--panel);
+  border-radius: 3px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.prog-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--voicy) 0%, var(--gold) 100%);
+  border-radius: 3px;
+  transition: width .6s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 0 8px var(--voicy-glow);
+}
+
+/* ── タブ ─────────────────────────────────────── */
+.tabs {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 130px; z-index: 40;
+}
+.tab-btn {
+  flex: 1; padding: 11px 4px;
+  font-family: var(--ff-jp); font-size: 11px; font-weight: 500;
+  color: var(--muted); background: none; border: none; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+  letter-spacing: .03em;
+}
+.tab-btn.active { color: var(--voicy); border-bottom-color: var(--voicy); }
+
+/* ── スクリーン ───────────────────────────────── */
+.screen { display: none; padding: 16px; flex: 1; }
+.screen.active { display: block; }
+
+/* ── カード ───────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-title {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  margin-bottom: 12px; letter-spacing: .04em;
+  display: flex; align-items: center; gap: 6px;
+}
+.card-title-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--voicy); color: #fff;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 0 8px var(--voicy-glow);
+}
+
+/* ── 統計行 ───────────────────────────────────── */
+.stat-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 8px; text-align: center;
+}
+.stat-num {
+  font-family: var(--ff-en); font-size: 26px; color: var(--gold); line-height: 1;
+}
+.stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* ── バッジ ───────────────────────────────────── */
+.badge-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.badge-item {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  width: 58px;
+}
+.badge-circle {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  border: 2px solid var(--border2);
+  background: var(--panel);
+  transition: all .3s;
+  position: relative;
+}
+.badge-circle.got {
+  background: var(--gold-dim);
+  border-color: rgba(245,200,66,.5);
+  box-shadow: 0 0 16px var(--gold-glow);
+}
+.badge-circle.locked { filter: grayscale(1); opacity: .35; }
+.badge-lbl { font-size: 9px; color: var(--muted); text-align: center; line-height: 1.3; }
+.badge-lbl.got { color: var(--gold); font-weight: 700; }
+
+/* ── スタンプグリッド ────────────────────────── */
+.stamp-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+}
+.stamp-sec-title {
+  font-size: 12px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.stamp-sec-sub { font-size: 10px; color: var(--muted); margin-bottom: 14px; }
+
+.week-label {
+  font-size: 10px; color: var(--muted); font-weight: 500;
+  margin: 12px 0 6px; letter-spacing: .06em; text-transform: uppercase;
+}
+.stamp-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+}
+.stamp-cell {
+  aspect-ratio: 1; border-radius: 6px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--panel); border: 1px solid var(--border);
+  transition: all .2s; cursor: default; position: relative;
+  overflow: hidden;
+}
+.stamp-cell.done {
+  background: rgba(255,102,51,.12);
+  border-color: rgba(255,102,51,.35);
+}
+.stamp-cell.done.gold {
+  background: rgba(245,200,66,.14);
+  border-color: rgba(245,200,66,.4);
+  box-shadow: 0 0 10px rgba(245,200,66,.2);
+}
+.stamp-cell.locked { opacity: .4; }
+.stamp-cell.future { opacity: .2; }
+.s-ep { font-size: 8px; color: var(--subtle); line-height: 1; }
+.stamp-cell.done .s-ep { color: rgba(255,102,51,.7); }
+.stamp-cell.done.gold .s-ep { color: rgba(245,200,66,.8); }
+.s-icon { font-size: 13px; margin-top: 2px; }
+
+/* 凡例 */
+.legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  font-size: 10px; color: var(--muted); margin-bottom: 10px;
+}
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 3px; }
+
+/* ── エピソードセレクト ──────────────────────── */
+select {
+  width: 100%; padding: 10px 12px;
+  background: var(--panel); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-family: var(--ff-jp); font-size: 12px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%238A8A90' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+select:focus { outline: none; border-color: var(--voicy); }
+
+/* ── 理解度スケール ───────────────────────────── */
+.scale-row { display: flex; gap: 5px; }
+.s-btn {
+  flex: 1; height: 38px; border-radius: var(--radius-sm);
+  background: var(--panel); border: 1px solid var(--border2);
+  color: var(--muted); font-family: var(--ff-jp); font-size: 13px;
+  font-weight: 700; cursor: pointer;
+  transition: all .15s;
+}
+.s-btn:hover { border-color: var(--voicy); color: var(--text); }
+.s-btn.sel {
+  background: var(--voicy); border-color: var(--voicy);
+  color: #fff; box-shadow: 0 0 12px var(--voicy-glow);
+}
+.scale-lbl-row { display: flex; justify-content: space-between; margin-top: 5px; }
+.scale-lbl { font-size: 9px; color: var(--subtle); }
+
+/* ── テキストエリア ───────────────────────────── */
+textarea {
+  width: 100%; padding: 10px 12px;
+  background: var(--panel); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-family: var(--ff-jp); font-size: 13px;
+  line-height: 1.7; resize: none;
+}
+textarea::placeholder { color: var(--subtle); }
+textarea:focus { outline: none; border-color: var(--voicy); }
+
+/* ── 送信ボタン ───────────────────────────────── */
+.submit-btn {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, var(--voicy) 0%, #FF8C55 100%);
+  border: none; border-radius: var(--radius);
+  color: #fff; font-family: var(--ff-jp); font-size: 14px; font-weight: 700;
+  cursor: pointer; letter-spacing: .04em;
+  box-shadow: 0 4px 20px var(--voicy-glow);
+  transition: opacity .2s, transform .1s;
+  margin-top: 6px;
+}
+.submit-btn:hover { opacity: .92; transform: translateY(-1px); }
+.submit-btn:disabled { background: var(--subtle); cursor: default; box-shadow: none; transform: none; }
+
+/* ── 完了画面 ─────────────────────────────────── */
+.done-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 40px 20px; text-align: center; gap: 16px;
+}
+.done-circle {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: var(--voicy-dim); border: 2px solid rgba(255,102,51,.4);
+  display: flex; align-items: center; justify-content: center; font-size: 36px;
+  animation: popIn .5s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 0 30px var(--voicy-glow);
+}
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.done-title { font-family: var(--ff-en); font-size: 28px; color: var(--gold); }
+.done-sub { font-size: 13px; color: var(--muted); line-height: 1.8; }
+.done-stamp-box {
+  background: var(--panel); border: 1px solid rgba(245,200,66,.3);
+  border-radius: var(--radius); padding: 16px 32px; text-align: center;
+  box-shadow: 0 0 20px rgba(245,200,66,.1);
+}
+.done-num { font-family: var(--ff-en); font-size: 36px; color: var(--gold); line-height: 1; }
+.done-num-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.bonus-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.bonus-chip {
+  background: var(--gold-dim); border: 1px solid rgba(245,200,66,.3);
+  border-radius: 20px; padding: 5px 12px;
+  font-size: 11px; font-weight: 700; color: var(--gold);
+  animation: fadeSlideUp .4s ease backwards;
+}
+.bonus-chip:nth-child(2) { animation-delay: .1s; }
+.bonus-chip:nth-child(3) { animation-delay: .2s; }
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.back-link { font-size: 12px; color: var(--voicy); cursor: pointer; text-decoration: underline; margin-top: 4px; }
+
+/* ── 振り返りリスト ───────────────────────────── */
+.ref-item {
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.ref-item:last-child { border-bottom: none; }
+.ref-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.ref-ep-badge {
+  font-size: 10px; font-weight: 700; color: var(--voicy);
+  background: var(--voicy-dim); padding: 2px 8px; border-radius: 20px;
+}
+.ref-date { font-size: 10px; color: var(--subtle); }
+.ref-rikai {
+  font-size: 10px; background: var(--gold-dim); color: var(--gold);
+  padding: 2px 8px; border-radius: 20px; font-weight: 700;
+}
+.ref-section-lbl { font-size: 10px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.ref-body {
+  font-size: 12px; color: #B8B7B0; line-height: 1.7;
+  background: var(--panel); border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+/* ── デモ注記 ─────────────────────────────────── */
+.demo-note {
+  background: var(--teal-dim); border: 1px solid rgba(45,212,191,.25);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  font-size: 11px; color: var(--teal); line-height: 1.6; margin-bottom: 14px;
+}
+.demo-note strong { font-weight: 700; }
+
+/* ── ローディング ─────────────────────────────── */
+.loading { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+/* ── スクロールバー ───────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--subtle); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-icon">N</div>
+        <div>
+          <div class="brand-name">学びのセカンドオピニオン</div>
+          <div class="brand-sub">のざたん Voicy 聴取スタンプカード</div>
+        </div>
+      </div>
+      <div class="streak-badge">
+        <span class="streak-fire">🔥</span>
+        <span id="streak-num">3</span>日連続
+      </div>
+    </div>
+    <div class="prog-area">
+      <div class="prog-meta">
+        <span>今月の聴取達成</span>
+        <strong><span id="prog-cur">0</span> / 30回</strong>
+      </div>
+      <div class="prog-track">
+        <div class="prog-bar" id="prog-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('stamp',this)">🎙 スタンプ</button>
+    <button class="tab-btn" onclick="switchTab('form',this)">✏️ 今日聴いた</button>
+    <button class="tab-btn" onclick="switchTab('ref',this)">📖 振り返り</button>
+  </div>
+
+  <!-- ===== スタンプ画面 ===== -->
+  <div class="screen active" id="scr-stamp">
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num" id="s-total">0</div>
+        <div class="stat-label">聴取済</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--teal)" id="s-streak">3</div>
+        <div class="stat-label">連続日数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--gold)" id="s-badge-cnt">0</div>
+        <div class="stat-label">バッジ獲得</div>
+      </div>
+    </div>
+
+    <!-- バッジ -->
+    <div class="card">
+      <div class="card-title">🏅 バッジコレクション</div>
+      <div class="badge-row" id="badge-row"></div>
+    </div>
+
+    <!-- スタンプカード -->
+    <div class="stamp-section">
+      <div class="stamp-sec-title">📅 今月のスタンプカード（5月）</div>
+      <div class="stamp-sec-sub">毎日配信！聴いてリフレクションを記録するとスタンプがもらえます</div>
+
+      <div class="legend">
+        <span><span class="legend-dot" style="background:var(--voicy)"></span>聴取済</span>
+        <span><span class="legend-dot" style="background:var(--gold)"></span>マイルストーン</span>
+        <span><span class="legend-dot" style="background:var(--panel)"></span>未聴取</span>
+      </div>
+
+      <div id="stamp-grid-area"></div>
+    </div>
+
+  </div>
+
+  <!-- ===== フォーム画面 ===== -->
+  <div class="screen" id="scr-form">
+    <div id="form-main">
+
+      <div class="demo-note">
+        <strong>🎮 これはデモです。</strong>本物のシステムでは学校のGoogle アカウントでログインして使います。このデモでは「送信」するとその場でスタンプが押されます！
+      </div>
+
+      <!-- エピソード選択 -->
+      <div class="card">
+        <div class="card-title"><div class="card-title-num">1</div>今日聴いたエピソードを選ぶ</div>
+        <select id="ep-sel" onchange="onEpChange()">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <!-- エピソード情報 -->
+      <div class="card" id="ep-info-card" style="display:none">
+        <div class="card-title">🎙 エピソード情報</div>
+        <div id="ep-info-body" style="font-size:12px; color:var(--muted); line-height:1.7;"></div>
+      </div>
+
+      <div id="dynamic-area" style="display:none">
+
+        <!-- 理解度 -->
+        <div class="card">
+          <div class="card-title"><div class="card-title-num">2</div>今日の「刺さり度」</div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:10px;">聴いてどのくらい刺さった？正直に教えて</div>
+          <div class="scale-row">
+            <button class="s-btn" onclick="selScale(1,this)">1</button>
+            <button class="s-btn" onclick="selScale(2,this)">2</button>
+            <button class="s-btn" onclick="selScale(3,this)">3</button>
+            <button class="s-btn" onclick="selScale(4,this)">4</button>
+            <button class="s-btn" onclick="selScale(5,this)">5</button>
+          </div>
+          <div class="scale-lbl-row">
+            <span class="scale-lbl">うーん…</span>
+            <span class="scale-lbl">めっちゃ刺さった！</span>
+          </div>
+        </div>
+
+        <!-- クイズ -->
+        <div class="card" id="quiz-card">
+          <div class="card-title"><div class="card-title-num">3</div>ひとこと確認クイズ</div>
+          <div id="quiz-area" style="font-size:12px; color:var(--muted);">読み込み中...</div>
+        </div>
+
+        <!-- リフレクション -->
+        <div class="card">
+          <div class="card-title"><div class="card-title-num">4</div>今日の学びをひとこと</div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">「聴いた」→「気づいた」→「やってみたい」を短く</div>
+          <textarea id="ref-input" rows="4" placeholder="例：「定義する」って行為が、実は自分を縛るんじゃなくて自由にしてくれるって話、すごく腑に落ちた。今日から自分の仕事を一文で定義してみる。"></textarea>
+        </div>
+
+        <button class="submit-btn" id="submit-btn" onclick="doSubmit()">🎙 聴取スタンプをもらう</button>
+      </div>
+
+    </div>
+    <div id="form-done" style="display:none">
+      <div class="done-wrap">
+        <div class="done-circle">🎙</div>
+        <div class="done-title">Today's Done!</div>
+        <div class="done-sub">スタンプが押されました！<br>明日も聴いて連続記録を更新しよう。</div>
+        <div class="bonus-chips" id="bonus-chips"></div>
+        <div class="done-stamp-box">
+          <div class="done-num" id="done-num">0</div>
+          <div class="done-num-lbl">今月の聴取スタンプ</div>
+        </div>
+        <span class="back-link" onclick="goToStamp()">スタンプカードを確認する →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 振り返り画面 ===== -->
+  <div class="screen" id="scr-ref">
+    <div class="card" id="ref-list">
+      <div class="loading">まだ記録がありません</div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ================================================================
+// データ定義
+// ================================================================
+var EPISODES = [
+  { id:1,  date:'2025-05-01', title:'「教員らしくない」をやめることにした', desc:'自己紹介の言葉が自分を縛ってた話。「定義する」から始める生き方について。', quiz:'「定義する」行為が自分を______にしてくれる、というのがこの話のテーマ。', quizPlaceholder:'1語〜2語でどうぞ' },
+  { id:2,  date:'2025-05-02', title:'学びに「ゆとり」を取り戻す方法', desc:'インプットを詰め込むより「余白」がある方が定着する。タイム・ラグの使い方。', quiz:'「余白」が学びを助ける理由を、自分の言葉で一文にすると？', quizPlaceholder:'なるべく自分の体験を交えて' },
+  { id:3,  date:'2025-05-03', title:'会いに行けるセンセイとは何か', desc:'オンラインでもリアルでも「会いに行ける」状態を作ることの意味と設計。', quiz:'「会いに行ける」状態とはどういう状態だと思う？', quizPlaceholder:'自分なりの言葉で' },
+  { id:4,  date:'2025-05-04', title:'なぜ「問いを立てる力」が大事なのか', desc:'答えを教えることより、問いを立てる練習こそが探究の本質だという話。', quiz:'今日の話を聴いて、あなた自身が立てた「問い」を1つ書いてみて。', quizPlaceholder:'正解なんてないよ、気になったことを' },
+  { id:5,  date:'2025-05-05', title:'「面白がる力」を再起動する', desc:'大人になると「面白がれなくなる」のはなぜか。好奇心を取り戻す具体的な方法。', quiz:'あなたが最近「面白い！」と思ったことを教えて。どんな小さなことでも。', quizPlaceholder:'本当に何でもOK' },
+  { id:6,  date:'2025-05-06', title:'教育DXの「D」の意味を問い直す', desc:'デジタル化じゃなくて「変革」。学校のDXで何が変わるべきかの本質論。', quiz:'あなたにとって「DX」とは何の略だと感じている？自分の定義を。', quizPlaceholder:'Digital Transformation 以外の解釈でもOK' },
+  { id:7,  date:'2025-05-07', title:'Voicyで学ぶとはどういうことか', desc:'音声メディアで学ぶことの独自性。ながら聴きが実は「深い理解」につながる理由。', quiz:'「ながら聴き」中に一番頭に残ったことは？', quizPlaceholder:'何をしながら聴いてた？' },
+  { id:8,  date:'2025-05-08', title:'セカンドオピニオンという言葉を選んだ理由', desc:'医療の言葉を教育に借りてきた。なぜ「もうひとつの視点」が必要なのかの話。', quiz:'「セカンドオピニオン」。この言葉から連想する体験を教えて。', quizPlaceholder:'教育じゃなくてもいい' },
+];
+
+// ブラウザ側の状態（GASの代わり）
+var STATE = {
+  total:   0,
+  streak:  3,
+  stamps:  [],   // {id, date}
+  refs:    [],   // {epId, title, date, scale, quiz, ref}
+  badges:  [false,false,false,false,false]
+};
+
+var BADGE_DEFS = [
+  { icon:'🌱', label:'初回聴取',       need:1  },
+  { icon:'🎵', label:'7日達成',        need:7  },
+  { icon:'⭐', label:'14日達成',       need:14 },
+  { icon:'🔥', label:'連続7日',        needStreak:7 },
+  { icon:'👑', label:'今月コンプリート',need:30 },
+];
+
+var gSelectedScale = 0;
+var gCurrentEp = null;
+
+// ================================================================
+// 初期化
+// ================================================================
+window.onload = function() {
+  // デモ用：3回分のスタンプを初期状態として設定
+  STATE.stamps = [
+    { id:1, date:'2025-05-01' },
+    { id:2, date:'2025-05-02' },
+    { id:3, date:'2025-05-03' },
+  ];
+  STATE.refs = [
+    { epId:1, title:'「教員らしくない」をやめることにした', date:'2025-05-01', scale:5,
+      quiz:'自由', ref:'「定義する力が自由にしてくれる」、逆説的に聞こえるけどすごく納得した。\n今日から「私は○○する人」という一文を毎朝書いてみることにした。' },
+    { epId:2, title:'学びに「ゆとり」を取り戻す方法', date:'2025-05-02', scale:4,
+      quiz:'余韻がある時間が脳の整理を助けるから', ref:'聴き終わった後に5分ぼーっとする時間を意図的に作ってみた。たしかに定着した気がする。' },
+    { epId:3, title:'会いに行けるセンセイとは何か', date:'2025-05-03', scale:5,
+      quiz:'検索できて・到達できて・届く言葉がある状態', ref:'自分も「会いに行ける」側になりたいと思った。まずはSNSのプロフィールを書き直すことから。' },
+  ];
+  STATE.total = STATE.stamps.length;
+  updateBadges();
+  renderAll();
+  buildEpSelect();
+};
+
+// ================================================================
+// 描画
+// ================================================================
+function renderAll() {
+  document.getElementById('prog-cur').textContent = STATE.total;
+  document.getElementById('prog-bar').style.width = Math.min(STATE.total / 30 * 100, 100) + '%';
+  document.getElementById('s-total').textContent  = STATE.total;
+  document.getElementById('s-streak').textContent = STATE.streak;
+  document.getElementById('streak-num').textContent = STATE.streak;
+
+  var badgeCnt = STATE.badges.filter(Boolean).length;
+  document.getElementById('s-badge-cnt').textContent = badgeCnt;
+
+  renderBadges();
+  buildStampGrid();
+  renderRefs();
+}
+
+function renderBadges() {
+  var br = document.getElementById('badge-row');
+  br.innerHTML = '';
+  BADGE_DEFS.forEach(function(def, i) {
+    var got = STATE.badges[i];
+    var d = document.createElement('div');
+    d.className = 'badge-item';
+    d.innerHTML = '<div class="badge-circle ' + (got?'got':'locked') + '">' + def.icon + '</div>' +
+                  '<div class="badge-lbl ' + (got?'got':'') + '">' + def.label + '</div>';
+    br.appendChild(d);
+  });
+}
+
+function buildStampGrid() {
+  var area = document.getElementById('stamp-grid-area');
+  area.innerHTML = '';
+
+  // 5月の日付（1〜31）を週ごとに区切る
+  var totalDays = 31;
+  // 5月1日は木曜 = 週の4番目（0始まりで3）
+  var startDow = 3; // 0=月, ..., 6=日
+  var days = [];
+  // 最初の週のパディング
+  for (var p = 0; p < startDow; p++) days.push(null);
+  for (var d = 1; d <= totalDays; d++) days.push(d);
+
+  // 週ラベル
+  var dowLabels = ['月','火','水','木','金','土','日'];
+  var dowLabelEl = document.createElement('div');
+  dowLabelEl.className = 'stamp-grid';
+  dowLabelEl.style.marginBottom = '4px';
+  dowLabels.forEach(function(l) {
+    var s = document.createElement('div');
+    s.style.cssText = 'text-align:center; font-size:9px; color:var(--subtle); padding:3px 0;';
+    s.textContent = l;
+    dowLabelEl.appendChild(s);
+  });
+  area.appendChild(dowLabelEl);
+
+  var grid = document.createElement('div');
+  grid.className = 'stamp-grid';
+
+  var today = 5; // デモ：5月5日が「今日」
+
+  days.forEach(function(day) {
+    var cell = document.createElement('div');
+    cell.className = 'stamp-cell';
+
+    if (day === null) {
+      cell.style.background = 'transparent';
+      cell.style.border = 'none';
+      grid.appendChild(cell);
+      return;
+    }
+
+    var dateStr = '2025-05-' + String(day).padStart(2,'0');
+    var done = STATE.stamps.some(function(s) { return s.date === dateStr; });
+    var isMilestone = (day % 7 === 0);
+    var isFuture = day > today;
+
+    if (done) {
+      cell.classList.add('done');
+      if (isMilestone) cell.classList.add('gold');
+    } else if (isFuture) {
+      cell.classList.add('future');
+    }
+
+    cell.innerHTML = '<span class="s-ep">' + day + '</span>' +
+                     '<span class="s-icon">' + (done ? (isMilestone ? '⭐' : '🎙') : (isFuture ? '·' : '○')) + '</span>';
+    grid.appendChild(cell);
+  });
+
+  area.appendChild(grid);
+}
+
+// ================================================================
+// エピソードセレクト構築
+// ================================================================
+function buildEpSelect() {
+  var sel = document.getElementById('ep-sel');
+  EPISODES.forEach(function(ep) {
+    var done = STATE.stamps.some(function(s) { return s.id === ep.id; });
+    var o = document.createElement('option');
+    o.value = ep.id;
+    o.textContent = (done ? '✓ ' : '') + 'ep.' + ep.id + '｜' + ep.title;
+    sel.appendChild(o);
+  });
+}
+
+function onEpChange() {
+  var sel = document.getElementById('ep-sel');
+  var area = document.getElementById('dynamic-area');
+  var infoCard = document.getElementById('ep-info-card');
+
+  if (!sel.value) {
+    area.style.display = 'none';
+    infoCard.style.display = 'none';
+    return;
+  }
+
+  var epId = parseInt(sel.value);
+  gCurrentEp = EPISODES.find(function(e) { return e.id === epId; });
+  if (!gCurrentEp) return;
+
+  // エピソード情報
+  infoCard.style.display = 'block';
+  document.getElementById('ep-info-body').innerHTML =
+    '<div style="font-weight:700; color:var(--text); margin-bottom:4px;">ep.' + gCurrentEp.id + '｜' + esc(gCurrentEp.title) + '</div>' +
+    '<div>' + esc(gCurrentEp.desc) + '</div>' +
+    '<div style="margin-top:8px; font-size:11px; color:var(--voicy);">📅 ' + gCurrentEp.date + '</div>';
+
+  // クイズ
+  var quizArea = document.getElementById('quiz-area');
+  quizArea.innerHTML =
+    '<div style="background:var(--panel); border-radius:8px; padding:10px 12px; font-size:13px; color:var(--text); line-height:1.7; margin-bottom:10px;">' +
+    esc(gCurrentEp.quiz) + '</div>' +
+    '<textarea id="quiz-ans" rows="2" placeholder="' + esc(gCurrentEp.quizPlaceholder) + '"></textarea>';
+
+  area.style.display = 'block';
+
+  // スケールリセット
+  gSelectedScale = 0;
+  document.querySelectorAll('.s-btn').forEach(function(b) { b.classList.remove('sel'); });
+}
+
+// ================================================================
+// 理解度選択
+// ================================================================
+function selScale(n, btn) {
+  document.querySelectorAll('.s-btn').forEach(function(b) { b.classList.remove('sel'); });
+  btn.classList.add('sel');
+  gSelectedScale = n;
+}
+
+// ================================================================
+// 送信処理（GASの代わりにローカルで処理）
+// ================================================================
+function doSubmit() {
+  if (!gCurrentEp) { alert('エピソードを選んでください'); return; }
+  if (!gSelectedScale) { alert('刺さり度を選んでください'); return; }
+
+  var quizEl = document.getElementById('quiz-ans');
+  if (quizEl && !quizEl.value.trim()) { alert('確認クイズに答えてください'); return; }
+
+  var ref = document.getElementById('ref-input').value.trim();
+  if (!ref) { alert('今日の学びをひとこと書いてください'); return; }
+
+  var btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '記録中...';
+
+  // ローカルで状態更新（GASが行う処理のシミュレーション）
+  setTimeout(function() {
+    var today = '2025-05-' + String(5).padStart(2,'0'); // デモ日付
+
+    // 重複チェック
+    var already = STATE.stamps.some(function(s) { return s.id === gCurrentEp.id; });
+    if (!already) {
+      STATE.stamps.push({ id: gCurrentEp.id, date: today });
+      STATE.total++;
+    }
+
+    STATE.refs.unshift({
+      epId:  gCurrentEp.id,
+      title: gCurrentEp.title,
+      date:  today,
+      scale: gSelectedScale,
+      quiz:  quizEl ? quizEl.value.trim() : '',
+      ref:   ref
+    });
+
+    STATE.streak = already ? STATE.streak : STATE.streak + 1;
+    updateBadges();
+    renderAll();
+
+    // ボーナス表示
+    var chips = document.getElementById('bonus-chips');
+    chips.innerHTML = '';
+    var bonuses = ['🎙 聴取スタンプ +1'];
+    if (!already) bonuses.push('🔥 連続 ' + STATE.streak + '日！');
+    var newBadges = BADGE_DEFS.filter(function(_, i) { return STATE.badges[i]; });
+    if (newBadges.length > 0) bonuses.push('🏅 バッジ獲得！');
+
+    bonuses.forEach(function(b) {
+      var c = document.createElement('div');
+      c.className = 'bonus-chip'; c.textContent = b;
+      chips.appendChild(c);
+    });
+
+    document.getElementById('done-num').textContent = STATE.total;
+    document.getElementById('form-main').style.display = 'none';
+    document.getElementById('form-done').style.display = 'block';
+  }, 800);
+}
+
+// ================================================================
+// バッジ更新
+// ================================================================
+function updateBadges() {
+  STATE.badges[0] = STATE.total >= 1;
+  STATE.badges[1] = STATE.total >= 7;
+  STATE.badges[2] = STATE.total >= 14;
+  STATE.badges[3] = STATE.streak >= 7;
+  STATE.badges[4] = STATE.total >= 30;
+}
+
+// ================================================================
+// 完了後
+// ================================================================
+function goToStamp() {
+  document.getElementById('form-done').style.display = 'none';
+  document.getElementById('form-main').style.display = 'block';
+  document.getElementById('ep-sel').value = '';
+  document.getElementById('ep-info-card').style.display = 'none';
+  document.getElementById('dynamic-area').style.display = 'none';
+  document.getElementById('ref-input').value = '';
+  gSelectedScale = 0; gCurrentEp = null;
+  document.querySelectorAll('.s-btn').forEach(function(b) { b.classList.remove('sel'); });
+  switchTab('stamp', document.querySelectorAll('.tab-btn')[0]);
+}
+
+// ================================================================
+// 振り返り描画
+// ================================================================
+function renderRefs() {
+  var rl = document.getElementById('ref-list');
+  if (!STATE.refs || STATE.refs.length === 0) {
+    rl.innerHTML = '<div class="loading">まだ記録がありません</div>';
+    return;
+  }
+  rl.innerHTML = '';
+  STATE.refs.forEach(function(r) {
+    var d = document.createElement('div');
+    d.className = 'ref-item';
+    d.innerHTML =
+      '<div class="ref-head">' +
+        '<span class="ref-ep-badge">ep.' + r.epId + '</span>' +
+        '<span class="ref-date">' + r.date + '</span>' +
+        '<span class="ref-rikai">刺さり度 ' + r.scale + '</span>' +
+      '</div>' +
+      '<div style="margin-bottom:6px;">' +
+        '<div class="ref-section-lbl">✏️ 確認クイズ</div>' +
+        '<div class="ref-body">' + esc(r.quiz || '（記録なし）') + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="ref-section-lbl">💡 今日の学び</div>' +
+        '<div class="ref-body">' + esc(r.ref) + '</div>' +
+      '</div>';
+    rl.appendChild(d);
+  });
+}
+
+// ================================================================
+// タブ切り替え
+// ================================================================
+function switchTab(name, el) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(t) { t.classList.remove('active'); });
+  document.getElementById('scr-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ================================================================
+// エスケープ
+// ================================================================
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+</script>
+</body>
+</html>
